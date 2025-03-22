@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volt X Predictor Dashbord</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Manrope', sans-serif;
+            transition: all 0.5s ease;
+        }
+
+        .theme-1 { background: #0f172a; color: #22d3ee; }
+        .theme-2 { background: #1f2937; color: #facc15; }
+        .theme-3 { background: #111827; color: #10b981; }
+        .theme-4 { background: #000000; color: #f43f5e; }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+        }
+
+        .win { color: #16a34a; }
+        .loss { color: #dc2626; }
+        .pending { color: #f97316; }
+
+        .toggle-btn {
+            width: 50px; height: 50px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .toggle-btn:hover { transform: scale(1.1); }
+    </style>
+</head>
+
+<body class="theme-1 min-h-screen flex flex-col items-center py-10">
+
+    <!-- Header -->
+    <header class="mb-8 text-center space-y-2">
+        <h1 class="text-4xl font-bold uppercase"><i class="fas fa-robot mr-2"></i>ULTRA PRO MAX</h1>
+        <p class="text-sm opacity-75"><i class="fas fa-chart-line"></i> AI + API Prediction System</p>
+    </header>
+
+    <!-- Stats Section -->
+    <section class="w-full max-w-xl mb-8 p-6 rounded-lg shadow-lg card space-y-4 text-center">
+        <h2 class="text-2xl font-semibold"><i class="fas fa-chart-pie mr-2"></i> Status</h2>
+        <div class="flex justify-between text-base items-center">
+            <div><i class="fas fa-trophy mr-1"></i> Wins: <span id="totalWins" class="font-semibold">0</span></div>
+            <div><i class="fas fa-times-circle mr-1"></i> Losses: <span id="totalLosses" class="font-semibold">0</span></div>
+            <div><i class="fas fa-percentage mr-1"></i> Accuracy: <span id="accuracy" class="font-semibold">0%</span></div>
+        </div>
+    </section>
+
+    <!-- Prediction Section -->
+    <section class="w-full max-w-xl mb-8 p-6 rounded-lg shadow-lg card text-center space-y-4">
+        <h2 class="text-2xl font-semibold"><i class="fas fa-lightbulb mr-2"></i> Current Prediction</h2>
+        <div><i class="fas fa-clock mr-1"></i> Period: <span id="currentPeriod" class="font-semibold">--</span></div>
+        <div><i class="fas fa-brain mr-1"></i> Prediction: <span id="prediction" class="pending font-semibold">Pending</span></div>
+    </section>
+
+    <!-- History Section -->
+    <section class="w-full max-w-xl mb-8 p-6 rounded-lg shadow-lg card space-y-4">
+        <h2 class="text-2xl font-semibold text-center"><i class="fas fa-history mr-2"></i> History</h2>
+        <div id="history" class="space-y-2 text-left text-sm"></div>
+    </section>
+
+    <!-- Theme Toggle Section -->
+    <section class="flex gap-5 justify-center">
+        <button onclick="switchTheme(1)" class="toggle-btn bg-sky-500 hover:bg-sky-700"><i class="fas fa-sun"></i></button>
+        <button onclick="switchTheme(2)" class="toggle-btn bg-yellow-400 hover:bg-yellow-600"><i class="fas fa-moon"></i></button>
+        <button onclick="switchTheme(3)" class="toggle-btn bg-emerald-500 hover:bg-emerald-700"><i class="fas fa-leaf"></i></button>
+        <button onclick="switchTheme(4)" class="toggle-btn bg-pink-500 hover:bg-pink-700"><i class="fas fa-bolt"></i></button>
+        <button onclick="window.open('https://t.me/Aneaxity', '_blank')" class="toggle-btn bg-blue-500 hover:bg-blue-700"><i class="fas fa-paper-plane"></i></button>
+    </section>
+
+    <script>
+        let historyData = [];
+        let lastFetchedPeriod = null;
+
+        async function fetchGameResult() {
+            const payload = { pageSize: 10, pageNo: 1, typeId: 1, language: 0, random: "4a0522c6ecd8410496260e686be2a57c", signature: "334B5E70A0C9B8918B0B15E517E2069C", timestamp: Math.floor(Date.now() / 1000) };
+            let response = await fetch("https://api.bdg88zf.com/api/webapi/GetNoaverageEmerdList", {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+            });
+            let data = await response.json();
+            let latestResult = data?.data?.list?.[0];
+            if (latestResult) {
+                return { period: latestResult.issueNumber, result: latestResult.number };
+            } else {
+                return null;
+            }
+        }
+
+        function trendAnalysis(data) {
+            let bigCount = 0, smallCount = 0;
+            data.forEach(item => { if (item >= 5) bigCount++; else smallCount++; });
+            return bigCount > smallCount ? "BIG" : "SMALL";
+        }
+
+        function autoPredict() {
+            const nums = Array.from({ length: 10 }, () => Math.floor(Math.random() * 10));
+            return trendAnalysis(nums);
+        }
+
+        async function updatePrediction() {
+            let apiResult = await fetchGameResult();
+            if (apiResult && apiResult.period !== lastFetchedPeriod) {
+                lastFetchedPeriod = apiResult.period;
+                const prediction = autoPredict();
+                const period = (BigInt(apiResult.period) + 1n).toString();
+                document.getElementById("currentPeriod").innerText = period;
+                document.getElementById("prediction").innerText = prediction;
+                document.getElementById("prediction").className = "font-semibold pending";
+                historyData.unshift({ period: period, prediction: prediction, resultStatus: "Pending" });
+                updateHistory();
+                setTimeout(() => checkWinLoss(apiResult), 2000);
+            }
+        }
+
+        function checkWinLoss(apiResult) {
+            historyData.forEach(item => {
+                if (item.period === apiResult.period) {
+                    let actualResult = apiResult.result >= 5 ? "BIG" : "SMALL";
+                    item.resultStatus = (item.prediction === actualResult) ? "WIN" : "LOSS";
+                }
+            });
+            updateStats();
+            updateHistory();
+        }
+
+        function updateStats() {
+            const wins = historyData.filter(item => item.resultStatus === "WIN").length;
+            const losses = historyData.filter(item => item.resultStatus === "LOSS").length;
+            const total = wins + losses;
+            const confidence = total ? (wins / total) * 100 : 0;
+            document.getElementById("totalWins").innerText = wins;
+            document.getElementById("totalLosses").innerText = losses;
+            document.getElementById("accuracy").innerText = confidence.toFixed(2) + '%';
+        }
+
+        function updateHistory() {
+            const historyDiv = document.getElementById("history");
+            historyDiv.innerHTML = "";
+            historyData.forEach(item => {
+                const statusClass = item.resultStatus === "WIN" ? "win" : item.resultStatus === "LOSS" ? "loss" : "pending";
+                historyDiv.innerHTML += `<div><i class="fas fa-circle-notch mr-1"></i> Period: ${item.period} | Prediction: ${item.prediction} | <span class="${statusClass}">${item.resultStatus}</span></div>`;
+            });
+        }
+
+        function switchTheme(themeNum) {
+            document.body.className = `theme-${themeNum} min-h-screen flex flex-col items-center py-10`;
+        }
+
+        setInterval(updatePrediction, 10000);
+    </script>
+
+</body>
+
+</html>
